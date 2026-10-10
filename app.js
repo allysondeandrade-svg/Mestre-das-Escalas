@@ -508,8 +508,8 @@ class ScaleMasterApp {
 
     // Próxima pergunta após breve intervalo
     setTimeout(() => {
-      if (this.gameState.timeLeft > 0 || (this.config.gameMode === 'score' && this.config.scoreRoundTime === 0)) {
-        if (this.config.gameMode === 'ear' && isCorrect) {
+      if (this.gameState.timeLeft > 0 || (this.config.gameMode === 'score' && this.config.scoreRoundTime === 0) || this.config.gameMode === 'ear') {
+        if (this.config.gameMode === 'ear') {
           this.resetQuestionTimer();
         }
         this.generateNextQuestion();
