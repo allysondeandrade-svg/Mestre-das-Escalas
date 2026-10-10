@@ -20,39 +20,46 @@ class SoundSynthesizer {
     return this.soundEnabled;
   }
 
-  // Toca uma nota única simulando timbre de piano/vibrafone agradável
-  playNote(frequency, duration = 0.45, startTime = null) {
+  // Toca uma nota única simulando timbre de piano acústico com harmônicos ricos
+  playNote(frequency, duration = 0.8, startTime = null) {
     if (!this.soundEnabled) return;
     this.initAudio();
 
     const t = startTime !== null ? startTime : this.audioCtx.currentTime;
     
-    // Oscilador principal (tom quente - seno + triângulo mistos)
-    const osc = this.audioCtx.createOscillator();
-    const oscHarmonic = this.audioCtx.createOscillator();
+    // Osciladores harmônicos para criar timbre realista de piano
+    const osc1 = this.audioCtx.createOscillator(); // Fundamental
+    const osc2 = this.audioCtx.createOscillator(); // 2º Harmônico (Oitava)
+    const osc3 = this.audioCtx.createOscillator(); // 3º Harmônico (Quinta acima)
     const gainNode = this.audioCtx.createGain();
 
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(frequency, t);
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(frequency, t);
 
-    oscHarmonic.type = 'sine';
-    oscHarmonic.frequency.setValueAtTime(frequency * 2, t);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(frequency * 2, t);
 
-    // Envelope ADSR suave (Attack rápido, Decay e Release natural)
-    gainNode.gain.setValueAtTime(0.001, t);
-    gainNode.gain.exponentialRampToValueAtTime(0.35, t + 0.03);
-    gainNode.gain.exponentialRampToValueAtTime(0.18, t + 0.15);
+    osc3.type = 'sine';
+    osc3.frequency.setValueAtTime(frequency * 3, t);
+
+    // Envelope ADSR natural de piano
+    gainNode.gain.setValueAtTime(0.0001, t);
+    gainNode.gain.linearRampToValueAtTime(0.45, t + 0.015);
+    gainNode.gain.exponentialRampToValueAtTime(0.25, t + 0.12);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, t + duration);
 
-    osc.connect(gainNode);
-    oscHarmonic.connect(gainNode);
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
+    osc3.connect(gainNode);
     gainNode.connect(this.audioCtx.destination);
 
-    osc.start(t);
-    oscHarmonic.start(t);
+    osc1.start(t);
+    osc2.start(t);
+    osc3.start(t);
 
-    osc.stop(t + duration);
-    oscHarmonic.stop(t + duration);
+    osc1.stop(t + duration);
+    osc2.stop(t + duration);
+    osc3.stop(t + duration);
   }
 
   // Efeito sonoro de acerto

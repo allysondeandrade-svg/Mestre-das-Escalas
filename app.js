@@ -3,9 +3,10 @@ class ScaleMasterApp {
   constructor() {
     this.config = {
       scaleType: 'all', // 'all', 'major', 'minor'
-      gameMode: 'score', // 'score' (Pontuação) ou 'timeattack' (Contra o Tempo)
+      gameMode: 'score', // 'score', 'timeattack', 'ear' (Treino de Ouvido)
       scoreRoundTime: 60, // 30, 60, 120, 0 (zen)
       timeAttackStartTime: 20, // 10, 20, 30
+      earQuestionTime: 20, // 10, 20, 30 por pergunta
       selectedTonalities: new Set()
     };
 
@@ -53,6 +54,7 @@ class ScaleMasterApp {
     this.feedbackBanner = document.getElementById('feedback-banner');
     this.feedbackIcon = document.getElementById('feedback-icon');
     this.feedbackMessage = document.getElementById('feedback-message');
+    this.audioBtn = document.getElementById('play-scale-audio-btn');
 
     // Modal
     this.modal = document.getElementById('reference-modal');
@@ -135,9 +137,13 @@ class ScaleMasterApp {
     // In-game actions
     document.getElementById('skip-btn').addEventListener('click', () => this.skipQuestion());
     document.getElementById('give-up-btn').addEventListener('click', () => this.endGame());
-    document.getElementById('play-scale-audio-btn').addEventListener('click', () => {
-      if (this.gameState.currentScale) {
-        synth.playScaleSequence(this.gameState.currentScale.notes);
+    this.audioBtn.addEventListener('click', () => {
+      if (this.gameState.correctNoteObj) {
+        if (this.config.gameMode === 'ear') {
+          synth.playNote(this.gameState.correctNoteObj.freq, 1.2);
+        } else if (this.gameState.currentScale) {
+          synth.playScaleSequence(this.gameState.currentScale.notes);
+        }
       }
     });
 
@@ -158,7 +164,7 @@ class ScaleMasterApp {
       });
     });
 
-    // Config selectors - Game Mode (Pontuação vs Contra o Tempo)
+    // Config selectors - Game Mode (Pontuação, Contra o Tempo, Treino de Ouvido)
     document.querySelectorAll('#question-mode-selector .seg-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         document.querySelectorAll('#question-mode-selector .seg-btn').forEach(b => b.classList.remove('active'));
@@ -167,16 +173,22 @@ class ScaleMasterApp {
 
         const timerScoreSelector = document.getElementById('timer-score-selector');
         const timerTimeAttackSelector = document.getElementById('timer-timeattack-selector');
+        const timerEarSelector = document.getElementById('timer-ear-selector');
         const timerGroupLabel = document.getElementById('timer-group-label');
+
+        timerScoreSelector.style.display = 'none';
+        timerTimeAttackSelector.style.display = 'none';
+        timerEarSelector.style.display = 'none';
 
         if (this.config.gameMode === 'score') {
           timerGroupLabel.textContent = 'Tempo por Rodada:';
           timerScoreSelector.style.display = 'flex';
-          timerTimeAttackSelector.style.display = 'none';
-        } else {
+        } else if (this.config.gameMode === 'timeattack') {
           timerGroupLabel.textContent = 'Tempo Inicial:';
-          timerScoreSelector.style.display = 'none';
           timerTimeAttackSelector.style.display = 'flex';
+        } else if (this.config.gameMode === 'ear') {
+          timerGroupLabel.textContent = 'Tempo por Pergunta:';
+          timerEarSelector.style.display = 'flex';
         }
       });
     });
@@ -196,6 +208,15 @@ class ScaleMasterApp {
         document.querySelectorAll('#timer-timeattack-selector .seg-btn').forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
         this.config.timeAttackStartTime = parseInt(e.currentTarget.dataset.time, 10);
+      });
+    });
+
+    // Timer selector for Ear Training Mode
+    document.querySelectorAll('#timer-ear-selector .seg-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('#timer-ear-selector .seg-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        this.config.earQuestionTime = parseInt(e.currentTarget.dataset.time, 10);
       });
     });
 
@@ -275,6 +296,9 @@ class ScaleMasterApp {
     if (this.config.gameMode === 'timeattack') {
       this.gameState.timeLeft = this.config.timeAttackStartTime;
       this.gameState.totalInitialTime = this.config.timeAttackStartTime;
+    } else if (this.config.gameMode === 'ear') {
+      this.gameState.timeLeft = this.config.earQuestionTime;
+      this.gameState.totalInitialTime = this.config.earQuestionTime;
     } else {
       this.gameState.timeLeft = this.config.scoreRoundTime;
       this.gameState.totalInitialTime = this.config.scoreRoundTime;
@@ -302,7 +326,10 @@ class ScaleMasterApp {
       this.gameState.timeLeft--;
       this.timerDisplay.textContent = `${this.gameState.timeLeft}s`;
 
-      const baseTime = Math.max(this.gameState.totalInitialTime, this.gameState.timeLeft);
+      const baseTime = this.config.gameMode === 'ear' 
+        ? this.config.earQuestionTime 
+        : Math.max(this.gameState.totalInitialTime, this.gameState.timeLeft);
+
       const pct = (this.gameState.timeLeft / baseTime) * 100;
       this.timeProgressBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
 
@@ -313,10 +340,17 @@ class ScaleMasterApp {
     }, 1000);
   }
 
+  resetQuestionTimer() {
+    if (this.config.gameMode === 'ear') {
+      this.gameState.timeLeft = this.config.earQuestionTime;
+      this.timerDisplay.textContent = `${this.gameState.timeLeft}s`;
+      this.timeProgressBar.style.width = '100%';
+    }
+  }
+
   generateNextQuestion() {
     this.gameState.isAnsweringLocked = false;
     this.feedbackBanner.className = 'feedback-banner';
-    this.gameState.lastQuestionRenderTime = Date.now();
 
     // 1. Filtrar lista de escalas disponíveis
     let availableScales = SCALES_DATA.filter(s => this.config.selectedTonalities.has(s.id));
@@ -335,9 +369,20 @@ class ScaleMasterApp {
     const targetNote = scale.notes[degreeIndex];
     this.gameState.correctNoteObj = targetNote;
 
-    // Atualiza visual da questão no formato limpo e direto: "2º de C", "5º de Dm", etc.
     const degreeNumber = degreeIndex + 1;
-    this.questionText.innerHTML = `${degreeNumber}º de ${scale.shortName}`;
+
+    // Configura texto e áudio dependendo do modo
+    if (this.config.gameMode === 'ear') {
+      this.questionText.innerHTML = `🎵 Qual é o som? (${scale.shortName})`;
+      this.audioBtn.textContent = '🔊 Tocar Nota Novamente';
+      // Toca a nota imediatamente para o treino de ouvido
+      setTimeout(() => {
+        synth.playNote(targetNote.freq, 1.0);
+      }, 250);
+    } else {
+      this.questionText.innerHTML = `${degreeNumber}º de ${scale.shortName}`;
+      this.audioBtn.textContent = '🔊 Ouvir Escala';
+    }
 
     this.renderChoiceOptions(targetNote.noteEn);
   }
@@ -403,6 +448,10 @@ class ScaleMasterApp {
         this.gameState.timeLeft += secondsBonus;
         this.timerDisplay.textContent = `${this.gameState.timeLeft}s`;
         feedbackText = isFastCombo ? `🔥 Combo Rápido! +${secondsBonus}s` : `Correto! +${secondsBonus}s`;
+      } else if (this.config.gameMode === 'ear') {
+        // Modo Treino de Ouvido: reseta tempo da pergunta (ex: volta para 30s)
+        this.resetQuestionTimer();
+        feedbackText = `🎯 Na mosca! Nota ${this.gameState.correctNoteObj.noteEn}`;
       } else {
         // Modo Pontuação: 1 ponto por acerto + multiplicador de combo
         const multiplier = Math.min(4, 1 + Math.floor(this.gameState.streak / 3) * 0.5);
@@ -412,8 +461,8 @@ class ScaleMasterApp {
       }
 
       clickedBtn.classList.add('correct');
-      synth.playNote(this.gameState.correctNoteObj.freq);
-      synth.playSuccessSound();
+      // Toca a nota correspondente limpa e encorpada
+      synth.playNote(this.gameState.correctNoteObj.freq, 0.9);
 
       this.showFeedback(true, feedbackText);
     } else {
@@ -460,6 +509,9 @@ class ScaleMasterApp {
     // Próxima pergunta após breve intervalo
     setTimeout(() => {
       if (this.gameState.timeLeft > 0 || (this.config.gameMode === 'score' && this.config.scoreRoundTime === 0)) {
+        if (this.config.gameMode === 'ear' && isCorrect) {
+          this.resetQuestionTimer();
+        }
         this.generateNextQuestion();
       }
     }, isCorrect ? 750 : 1400);
@@ -472,6 +524,8 @@ class ScaleMasterApp {
     if (this.config.gameMode === 'timeattack') {
       this.gameState.timeLeft = Math.max(0, this.gameState.timeLeft - 3);
       this.timerDisplay.textContent = `${this.gameState.timeLeft}s`;
+    } else if (this.config.gameMode === 'ear') {
+      this.resetQuestionTimer();
     } else {
       this.gameState.score = Math.max(0, this.gameState.score - 1);
     }
@@ -487,7 +541,7 @@ class ScaleMasterApp {
   }
 
   updateStatsUI() {
-    if (this.config.gameMode === 'timeattack') {
+    if (this.config.gameMode === 'timeattack' || this.config.gameMode === 'ear') {
       this.currentScoreDisplay.textContent = `${this.gameState.correctAnswers} acertos`;
       document.querySelector('.score-pill .pill-label').textContent = 'Acertos';
     } else {
@@ -507,8 +561,11 @@ class ScaleMasterApp {
   endGame() {
     if (this.gameState.timerInterval) clearInterval(this.gameState.timerInterval);
 
-    // Salva recorde (no modo pontuação salva pontos, no timeattack salva acertos)
-    const currentMetric = this.config.gameMode === 'timeattack' ? this.gameState.correctAnswers : this.gameState.score;
+    // Salva recorde (no modo pontuação salva pontos, no timeattack/ear salva acertos)
+    const currentMetric = (this.config.gameMode === 'timeattack' || this.config.gameMode === 'ear') 
+      ? this.gameState.correctAnswers 
+      : this.gameState.score;
+
     if (currentMetric > this.gameState.bestScore) {
       this.gameState.bestScore = currentMetric;
       localStorage.setItem('mestre_escalas_best_score', this.gameState.bestScore.toString());
@@ -521,7 +578,7 @@ class ScaleMasterApp {
       : 0;
 
     // Popula tela de Game Over
-    document.getElementById('final-score').textContent = this.config.gameMode === 'timeattack' 
+    document.getElementById('final-score').textContent = (this.config.gameMode === 'timeattack' || this.config.gameMode === 'ear')
       ? `${this.gameState.correctAnswers} acertos` 
       : `${this.gameState.score} pts`;
     document.getElementById('final-accuracy').textContent = `${accuracy}%`;
