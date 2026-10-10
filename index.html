@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mestre das Escalas - Treinador de Teoria Musical</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <div class="logo-icon">🎵</div>
+        <div>
+          <h1>Mestre das Escalas</h1>
+          <p class="subtitle">Decore graus, notas e acidentes com agilidade</p>
+        </div>
+      </div>
+      <div class="header-stats">
+        <div class="stat-badge">
+          <span class="stat-label">Sequência</span>
+          <span class="stat-value" id="streak-counter">🔥 0</span>
+        </div>
+        <div class="stat-badge">
+          <span class="stat-label">Recorde</span>
+          <span class="stat-value" id="best-score">🏆 0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="main-content">
+      <!-- Left Config / Mode Card -->
+      <section class="card config-card">
+        <div class="card-header">
+          <h2>⚙️ Configuração de Treino</h2>
+        </div>
+
+        <div class="config-group">
+          <label class="group-label">Tipo de Escala:</label>
+          <div class="segmented-control" id="scale-type-selector">
+            <button class="seg-btn active" data-scale-type="all">Todas</button>
+            <button class="seg-btn" data-scale-type="major">Maiores</button>
+            <button class="seg-btn" data-scale-type="minor">Menores</button>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="group-label">Modo de Jogo:</label>
+          <div class="segmented-control" id="question-mode-selector">
+            <button class="seg-btn active" data-qmode="score">Pontuação</button>
+            <button class="seg-btn" data-qmode="timeattack">Contra o Tempo</button>
+          </div>
+        </div>
+
+        <div class="config-group" id="timer-config-group">
+          <label class="group-label" id="timer-group-label">Tempo por Rodada:</label>
+          <!-- Timer options for Pontuação Mode -->
+          <div class="segmented-control" id="timer-score-selector">
+            <button class="seg-btn" data-time="30">30s</button>
+            <button class="seg-btn active" data-time="60">60s</button>
+            <button class="seg-btn" data-time="120">120s</button>
+            <button class="seg-btn" data-time="0">Livre (Zen)</button>
+          </div>
+          <!-- Timer options for Contra o Tempo Mode -->
+          <div class="segmented-control" id="timer-timeattack-selector" style="display: none;">
+            <button class="seg-btn" data-time="10">10s</button>
+            <button class="seg-btn active" data-time="20">20s</button>
+            <button class="seg-btn" data-time="30">30s</button>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="group-label">Filtro de Tonalidades:</label>
+          <div class="tonality-grid" id="tonality-filter">
+            <!-- Injected by JS -->
+          </div>
+          <div class="tonality-quick-actions">
+            <button id="select-all-btn" class="text-btn">Selecionar Todas</button>
+            <button id="select-naturals-btn" class="text-btn">Só Naturais</button>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button id="start-game-btn" class="btn btn-primary btn-glow">
+            <span>🚀 Iniciar Desafio</span>
+          </button>
+        </div>
+
+        <!-- Reference Scale Cheat Sheet Modal Trigger -->
+        <div class="reference-box">
+          <button id="open-reference-btn" class="btn btn-secondary">
+            📖 Dicionário de Escalas (Tabela)
+          </button>
+        </div>
+      </section>
+
+      <!-- Right Quiz / Gameplay Area -->
+      <section class="card game-card">
+        <!-- Idle State Screen -->
+        <div id="game-idle-screen" class="game-screen active">
+          <div class="idle-illustration">🎯</div>
+          <h2>Pronto para treinar?</h2>
+          <p>Treine sua mente para responder instantaneamente qualquer grau de qualquer escala maior ou menor!</p>
+          <ul class="features-list">
+            <li>✨ <strong>Modo Contra o Tempo:</strong> Ganhe pontos por velocidade e precisão.</li>
+            <li>🎧 <strong>Feedback Sonoro:</strong> Escute a nota em tempo real com áudio sintetizado.</li>
+            <li>📊 <strong>Estatísticas detalhadas:</strong> Veja onde você mais erra e domine seus pontos fracos.</li>
+          </ul>
+          <button id="quick-start-btn" class="btn btn-primary btn-large">Começar Agora</button>
+        </div>
+
+        <!-- Active Quiz Screen -->
+        <div id="game-active-screen" class="game-screen">
+          <!-- Quiz Top Bar -->
+          <div class="quiz-top-bar">
+            <div class="score-pill">
+              <span class="pill-label">Pontos</span>
+              <span class="pill-value" id="current-score">0</span>
+            </div>
+            <div class="multiplier-pill">
+              <span id="combo-badge">Combo 1x</span>
+            </div>
+            <div class="timer-pill" id="timer-container">
+              <span class="timer-icon">⏳</span>
+              <span id="timer-display">60s</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="progress-track">
+            <div class="progress-fill" id="time-progress-bar"></div>
+          </div>
+
+          <!-- Question Box -->
+          <div class="question-container">
+            <h2 class="question-prompt" id="question-text">2º de C</h2>
+          </div>
+
+          <!-- Audio playback button -->
+          <div class="audio-controls">
+            <button id="play-scale-audio-btn" class="audio-btn" title="Ouvir a escala">
+              🔊 Ouvir Escala
+            </button>
+          </div>
+
+          <!-- Answer Options Multiple Choice in Cifras -->
+          <div class="answer-section">
+            <div class="choice-grid" id="choice-grid">
+              <!-- Dynamically populated 4 options (C, D, E, F, etc.) -->
+            </div>
+
+            <div class="feedback-banner" id="feedback-banner">
+              <span id="feedback-icon"></span>
+              <span id="feedback-message"></span>
+            </div>
+          </div>
+
+          <div class="game-bottom-actions">
+            <button id="give-up-btn" class="btn btn-outline-danger">Encerrar Rodada</button>
+            <button id="skip-btn" class="btn btn-secondary">Pular (-5 pts)</button>
+          </div>
+        </div>
+
+        <!-- Round Over / Summary Screen -->
+        <div id="game-over-screen" class="game-screen">
+          <div class="result-badge" id="result-icon">🏆</div>
+          <h2 id="result-title">Fim da Rodada!</h2>
+          <p class="result-subtitle" id="result-subtitle">Você demonstrou ótimo conhecimento teórico.</p>
+
+          <div class="results-grid">
+            <div class="result-stat-box">
+              <span class="res-num" id="final-score">0</span>
+              <span class="res-label">Pontuação Total</span>
+            </div>
+            <div class="result-stat-box">
+              <span class="res-num" id="final-accuracy">0%</span>
+              <span class="res-label">Precisão</span>
+            </div>
+            <div class="result-stat-box">
+              <span class="res-num" id="final-correct">0</span>
+              <span class="res-label">Acertos</span>
+            </div>
+            <div class="result-stat-box">
+              <span class="res-num" id="final-streak">0</span>
+              <span class="res-label">Maior Sequência</span>
+            </div>
+          </div>
+
+          <!-- Mistakes review -->
+          <div class="mistakes-container" id="mistakes-container">
+            <h3>📝 Revisão de Erros</h3>
+            <div class="mistakes-list" id="mistakes-list">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button id="restart-btn" class="btn btn-primary btn-large">Jogar Novamente</button>
+            <button id="back-config-btn" class="btn btn-secondary">Mudar Configuração</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Reference Modal (Dicionário de Escalas) -->
+    <div class="modal-overlay" id="reference-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>📚 Dicionário Completo de Escalas</h2>
+          <button class="modal-close-btn" id="close-reference-btn">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-filter-row">
+            <input type="text" id="scale-search-input" placeholder="Buscar escala (ex: Ré Maior, Lá menor, Fá#...)" class="search-input">
+            <div class="modal-segmented">
+              <button class="seg-btn active" data-ref-filter="all">Todas</button>
+              <button class="seg-btn" data-ref-filter="major">Maiores</button>
+              <button class="seg-btn" data-ref-filter="minor">Menores</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="scales-table" id="scales-reference-table">
+              <thead>
+                <tr>
+                  <th>Tonalidade</th>
+                  <th>Tipo</th>
+                  <th>Armadura (Acidentes)</th>
+                  <th>Graus (I - II - III - IV - V - VI - VII)</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody id="scales-table-body">
+                <!-- Injected by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Audio Toggle -->
+    <div class="sound-toggle-badge" id="sound-toggle-btn" title="Ativar/Desativar Som">
+      <span id="sound-icon">🔊</span>
+    </div>
+  </div>
+
+  <script src="scales-data.js"></script>
+  <script src="audio.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
