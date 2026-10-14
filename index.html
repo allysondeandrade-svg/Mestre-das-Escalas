@@ -7,8 +7,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
   <div class="app-container">
@@ -26,7 +29,7 @@
           <span class="stat-label">Sequência</span>
           <span class="stat-value" id="streak-counter">🔥 0</span>
         </div>
-        <div class="stat-badge">
+        <div class="stat-badge clickable-badge" id="header-record-badge" title="Clique para ver o Histórico e Recordes">
           <span class="stat-label">Recorde</span>
           <span class="stat-value" id="best-score">🏆 0</span>
         </div>
@@ -68,11 +71,15 @@
             <button class="seg-btn" data-time="120">120s</button>
             <button class="seg-btn" data-time="0">Livre (Zen)</button>
           </div>
-          <!-- Timer options for Contra o Tempo Mode -->
+          <!-- Difficulty options for Contra o Tempo Mode -->
           <div class="segmented-control" id="timer-timeattack-selector" style="display: none;">
-            <button class="seg-btn" data-time="10">10s</button>
-            <button class="seg-btn active" data-time="20">20s</button>
-            <button class="seg-btn" data-time="30">30s</button>
+            <button class="seg-btn" data-difficulty="easy">Fácil</button>
+            <button class="seg-btn active" data-difficulty="medium">Médio</button>
+            <button class="seg-btn" data-difficulty="hard">Difícil</button>
+            <button class="seg-btn" data-difficulty="expert">Especialista</button>
+          </div>
+          <div class="difficulty-hint" id="timeattack-hint" style="display: none;">
+            Acerto: +5s | Erro: -5s | Combo: 3s
           </div>
           <!-- Timer options for Treino de Ouvido Mode (por pergunta) -->
           <div class="segmented-control" id="timer-ear-selector" style="display: none;">
@@ -104,26 +111,16 @@
           <button id="open-reference-btn" class="btn btn-secondary">
             📖 Dicionário de Escalas (Tabela)
           </button>
+          <button id="open-history-btn" class="btn btn-secondary" style="margin-top: 0.5rem;">
+            🏆 Histórico & Recordes
+          </button>
         </div>
       </section>
 
       <!-- Right Quiz / Gameplay Area -->
       <section class="card game-card">
-        <!-- Idle State Screen -->
-        <div id="game-idle-screen" class="game-screen active">
-          <div class="idle-illustration">🎯</div>
-          <h2>Pronto para treinar?</h2>
-          <p>Treine sua mente para responder instantaneamente qualquer grau de qualquer escala maior ou menor!</p>
-          <ul class="features-list">
-            <li>✨ <strong>Modo Contra o Tempo:</strong> Ganhe pontos por velocidade e precisão.</li>
-            <li>🎧 <strong>Feedback Sonoro:</strong> Escute a nota em tempo real com áudio sintetizado.</li>
-            <li>📊 <strong>Estatísticas detalhadas:</strong> Veja onde você mais erra e domine seus pontos fracos.</li>
-          </ul>
-          <button id="quick-start-btn" class="btn btn-primary btn-large">Começar Agora</button>
-        </div>
-
         <!-- Active Quiz Screen -->
-        <div id="game-active-screen" class="game-screen">
+        <div id="game-active-screen" class="game-screen active">
           <!-- Quiz Top Bar -->
           <div class="quiz-top-bar">
             <div class="score-pill">
@@ -144,16 +141,41 @@
             <div class="progress-fill" id="time-progress-bar"></div>
           </div>
 
+          <!-- Round Info Bar for Time Attack -->
+          <div class="timeattack-round-bar" id="timeattack-round-bar" style="display: none;">
+            <div class="round-status-badge">
+              <span id="round-number-text">Rodada 1/5</span>
+              <span class="round-dot-sep">•</span>
+              <span id="round-question-text">Pergunta 1/10</span>
+            </div>
+            <div class="round-dots-container" id="round-dots-container">
+              <span class="round-dot active" data-round="1">1</span>
+              <span class="round-dot" data-round="2">2</span>
+              <span class="round-dot" data-round="3">3</span>
+              <span class="round-dot" data-round="4">4</span>
+              <span class="round-dot" data-round="5">5</span>
+            </div>
+          </div>
+
+          <!-- Bonus Question Banner -->
+          <div class="bonus-question-badge" id="bonus-question-badge" style="display: none;">
+            <div class="bonus-badge-title">⭐ PERGUNTA BÔNUS ESPECIAL</div>
+            <div class="bonus-badge-sub">Escala Não-Natural • 10s • Acerto = 3x Ganho de Tempo!</div>
+          </div>
+
           <!-- Question Box -->
           <div class="question-container">
             <h2 class="question-prompt" id="question-text">2º de C</h2>
           </div>
 
-          <!-- Audio playback button -->
+          <!-- Audio playback button and inline feedback notification -->
           <div class="audio-controls">
             <button id="play-scale-audio-btn" class="audio-btn" title="Ouvir a escala">
               🔊 Ouvir Escala
             </button>
+            <div id="inline-feedback" class="inline-feedback">
+              <span id="inline-feedback-text"></span>
+            </div>
           </div>
 
           <!-- Answer Options Multiple Choice in Cifras -->
@@ -209,6 +231,7 @@
 
           <div class="card-actions">
             <button id="restart-btn" class="btn btn-primary btn-large">Jogar Novamente</button>
+            <button id="view-history-btn" class="btn btn-secondary">📊 Ver Histórico</button>
             <button id="back-config-btn" class="btn btn-secondary">Mudar Configuração</button>
           </div>
         </div>
@@ -252,6 +275,61 @@
       </div>
     </div>
 
+    <!-- History & Records Modal -->
+    <div class="modal-overlay" id="history-modal">
+      <div class="modal-content history-modal-content">
+        <div class="modal-header">
+          <h2>🏆 Recordes & Histórico de Partidas</h2>
+          <button class="modal-close-btn" id="close-history-btn">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="history-tabs">
+            <button class="seg-btn active" id="tab-records-btn" data-tab="records">🥇 Recordes por Nível</button>
+            <button class="seg-btn" id="tab-history-btn" data-tab="history">📜 Histórico Completo</button>
+          </div>
+
+          <!-- Tab 1: Records -->
+          <div id="tab-records-content" class="tab-panel active">
+            <h3 class="panel-section-title">⏱️ Contra o Tempo (5 Rodadas)</h3>
+            <div class="records-grid" id="timeattack-records-grid">
+              <!-- Rendered by JS -->
+            </div>
+
+            <h3 class="panel-section-title" style="margin-top: 1.5rem;">🎯 Outros Modos</h3>
+            <div class="records-grid" id="other-records-grid">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Tab 2: Match History -->
+          <div id="tab-history-content" class="tab-panel" style="display: none;">
+            <div class="history-actions-bar">
+              <span id="history-total-count" class="history-count-text">0 partidas salvas</span>
+              <button id="clear-history-btn" class="btn-text-danger">🗑️ Limpar Histórico</button>
+            </div>
+            <div class="table-responsive">
+              <table class="scales-table history-table">
+                <thead>
+                  <tr>
+                    <th>Data/Hora</th>
+                    <th>Modo</th>
+                    <th>Nível</th>
+                    <th>Resultado</th>
+                    <th>Rodadas</th>
+                    <th>Precisão</th>
+                    <th>Maior Seq.</th>
+                  </tr>
+                </thead>
+                <tbody id="history-table-body">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Floating Audio Toggle -->
     <div class="sound-toggle-badge" id="sound-toggle-btn" title="Ativar/Desativar Som">
       <span id="sound-icon">🔊</span>
@@ -260,6 +338,6 @@
 
   <script src="scales-data.js"></script>
   <script src="audio.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
