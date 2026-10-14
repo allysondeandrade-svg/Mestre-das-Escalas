@@ -300,13 +300,13 @@ body {
   }
 
   .quiz-top-bar {
-    gap: 0.35rem;
+    width: 100%;
+    box-sizing: border-box;
   }
 
-  .score-pill, .multiplier-pill, .timer-pill {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.82rem;
-    gap: 0.3rem;
+  .score-pill, .timer-pill {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.84rem;
   }
 
   .question-prompt {
@@ -316,6 +316,8 @@ body {
   .question-container {
     padding: 1.25rem 0.6rem !important;
     margin-bottom: 0.85rem;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .choice-btn {
@@ -325,23 +327,31 @@ body {
 
   .choice-grid {
     gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .game-bottom-actions {
     gap: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0.5rem;
   }
 
   .game-bottom-actions .btn {
-    padding: 0.65rem 0.5rem;
-    font-size: 0.85rem;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.65rem 0.35rem;
+    font-size: 0.84rem;
+    white-space: nowrap;
   }
 
   .sound-toggle-badge {
     bottom: 0.85rem;
     right: 0.85rem;
-    width: 40px;
-    height: 40px;
-    font-size: 1.1rem;
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
   }
 }
 
@@ -630,45 +640,25 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.8rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.score-pill, .multiplier-pill, .timer-pill {
+.score-pill, .timer-pill {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.4rem 0.9rem;
-  background: rgba(0, 0, 0, 0.4);
+  padding: 0.42rem 1rem;
+  background: rgba(0, 0, 0, 0.45);
   border: 1px solid var(--bg-card-border);
   border-radius: var(--radius-full);
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  white-space: nowrap;
 }
 
-.multiplier-pill {
-  color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.3);
-  transition: all 0.2s ease;
-  font-variant-numeric: tabular-nums;
-}
-
-.multiplier-pill.combo-active {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: #f59e0b;
-  color: #fef08a;
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.45);
-  animation: pulse-combo 0.9s ease-in-out infinite alternate;
-}
-
-@keyframes pulse-combo {
-  from { transform: scale(1); box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
-  to { transform: scale(1.05); box-shadow: 0 0 20px rgba(245, 158, 11, 0.65); }
-}
-
-.combo-time-text {
-  font-size: 0.84rem;
-  color: #fde68a;
-  font-weight: 800;
-  margin-left: 2px;
+.score-pill {
+  color: #fff;
 }
 
 .timer-pill {
@@ -1159,7 +1149,7 @@ body {
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
-/* Barra de Rodadas do Modo Contra o Tempo */
+/* Barra de Rodadas do Modo Contra o Tempo (com Bloco de Combo à direita) */
 .timeattack-round-bar {
   display: flex;
   justify-content: space-between;
@@ -1168,8 +1158,10 @@ body {
   background: rgba(99, 102, 241, 0.12);
   border: 1px solid rgba(99, 102, 241, 0.25);
   border-radius: var(--radius-md);
-  padding: 0.5rem 0.9rem;
-  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  gap: 0.6rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .round-status-badge {
@@ -1179,45 +1171,64 @@ body {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  white-space: nowrap;
 }
 
 .round-dot-sep {
   opacity: 0.4;
 }
 
-.round-dots-container {
+/* Bloco de Combo com mini-linha regressiva */
+.round-combo-block {
   display: flex;
-  gap: 0.35rem;
-  align-items: center;
-}
-
-.round-dot {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
   justify-content: center;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  transition: all 0.25s ease;
+  min-width: 84px;
+  flex-shrink: 0;
 }
 
-.round-dot.active {
-  background: var(--accent-primary);
-  color: #fff;
-  border-color: #818cf8;
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
-  transform: scale(1.1);
+.combo-title-row {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
-.round-dot.completed {
-  background: rgba(16, 185, 129, 0.25);
-  color: #34d399;
-  border-color: #10b981;
+.combo-badge-text {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fbbf24;
+  white-space: nowrap !important;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+}
+
+.round-combo-block.combo-active .combo-badge-text {
+  color: #fef08a;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.65);
+}
+
+.combo-mini-track {
+  width: 100%;
+  min-width: 76px;
+  max-width: 110px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 3px;
+}
+
+.combo-mini-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  border-radius: 99px;
+  transition: width 0.04s linear;
+}
+
+.round-combo-block.combo-active .combo-mini-fill {
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7);
 }
 
 /* Banner de Pergunta Bônus Especial */

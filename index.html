@@ -11,7 +11,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <div class="app-container">
@@ -121,14 +121,10 @@
       <section class="card game-card">
         <!-- Active Quiz Screen -->
         <div id="game-active-screen" class="game-screen active">
-          <!-- Quiz Top Bar -->
+          <!-- Quiz Top Bar (apenas Acertos e Tempo para não cortar na direita) -->
           <div class="quiz-top-bar">
-            <div class="score-pill">
-              <span class="pill-label">Pontos</span>
-              <span class="pill-value" id="current-score">0</span>
-            </div>
-            <div class="multiplier-pill">
-              <span id="combo-badge">Combo 1x</span>
+            <div class="score-pill" id="score-pill">
+              <span id="score-pill-text">Acertos 0</span>
             </div>
             <div class="timer-pill" id="timer-container">
               <span class="timer-icon">⏳</span>
@@ -141,19 +137,20 @@
             <div class="progress-fill" id="time-progress-bar"></div>
           </div>
 
-          <!-- Round Info Bar for Time Attack -->
+          <!-- Round Info Bar for Time Attack (com Bloco de Combo à direita) -->
           <div class="timeattack-round-bar" id="timeattack-round-bar" style="display: none;">
             <div class="round-status-badge">
               <span id="round-number-text">Rodada 1/5</span>
               <span class="round-dot-sep">•</span>
               <span id="round-question-text">Pergunta 1/10</span>
             </div>
-            <div class="round-dots-container" id="round-dots-container">
-              <span class="round-dot active" data-round="1">1</span>
-              <span class="round-dot" data-round="2">2</span>
-              <span class="round-dot" data-round="3">3</span>
-              <span class="round-dot" data-round="4">4</span>
-              <span class="round-dot" data-round="5">5</span>
+            <div class="round-combo-block" id="round-combo-block">
+              <div class="combo-title-row">
+                <span id="combo-badge" class="combo-badge-text">Combo 0</span>
+              </div>
+              <div class="combo-mini-track">
+                <div class="combo-mini-fill" id="combo-mini-progress"></div>
+              </div>
             </div>
           </div>
 
@@ -338,6 +335,6 @@
 
   <script src="scales-data.js"></script>
   <script src="audio.js"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

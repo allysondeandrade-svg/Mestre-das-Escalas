@@ -162,9 +162,8 @@ class ScaleMasterApp {
       timeLeft: 60,
       totalInitialTime: 60,
       timerInterval: null,
-      comboMultiplier: 1,
-      comboTimeLeft: 0,
-      comboEndTime: 0,
+      comboLevel: 0, // 0, 1, 2, 3, 4 (máx +4s)
+      nextComboLevel: 0,
       comboInterval: null,
       pendingComboStart: false,
       currentScale: null,
@@ -204,18 +203,18 @@ class ScaleMasterApp {
     // Stats
     this.streakCounter = document.getElementById('streak-counter');
     this.bestScoreDisplay = document.getElementById('best-score');
-    this.currentScoreDisplay = document.getElementById('current-score');
-    this.comboBadge = document.getElementById('combo-badge');
-    this.comboPill = document.querySelector('.multiplier-pill');
+    this.scorePillText = document.getElementById('score-pill-text');
     this.timerDisplay = document.getElementById('timer-display');
     this.timeProgressBar = document.getElementById('time-progress-bar');
     this.headerRecordBadge = document.getElementById('header-record-badge');
 
-    // Barra de rodadas e Pergunta Bônus
+    // Barra de rodadas e Bloco de Combo
     this.roundBar = document.getElementById('timeattack-round-bar');
     this.roundNumberText = document.getElementById('round-number-text');
     this.roundQuestionText = document.getElementById('round-question-text');
-    this.roundDots = document.querySelectorAll('#round-dots-container .round-dot');
+    this.roundComboBlock = document.getElementById('round-combo-block');
+    this.comboBadge = document.getElementById('combo-badge');
+    this.comboProgressFill = document.getElementById('combo-mini-progress');
     this.bonusBadge = document.getElementById('bonus-question-badge');
 
     // Question & Controls
@@ -386,6 +385,7 @@ class ScaleMasterApp {
         }
 
         this.updateRoundUI();
+        this.updateStatsUI();
       });
     });
 
@@ -527,8 +527,8 @@ class ScaleMasterApp {
     this.gameState.correctAnswers = 0;
     this.gameState.mistakes = [];
     this.gameState.isAnsweringLocked = false;
-    this.gameState.comboMultiplier = 1;
-    this.gameState.comboTimeLeft = 0;
+    this.gameState.comboLevel = 0;
+    this.gameState.nextComboLevel = 0;
     this.gameState.pendingComboStart = false;
     this.gameState.timeLeft = this.config.scoreRoundTime;
     this.gameState.totalInitialTime = this.config.scoreRoundTime;
@@ -539,6 +539,7 @@ class ScaleMasterApp {
     this.timeAttackState.savedMainTime = 0;
     this.timeAttackState.bonusWonCount = 0;
 
+    if (this.comboProgressFill) this.comboProgressFill.style.width = '0%';
     this.updateStatsUI();
     this.updateComboUI();
     this.updateRoundUI();
@@ -559,9 +560,8 @@ class ScaleMasterApp {
     this.gameState.mistakes = [];
     this.gameState.isAnsweringLocked = false;
     this.gameState.lastAnswerTime = Date.now();
-    this.gameState.comboMultiplier = 1;
-    this.gameState.comboTimeLeft = 0;
-    this.gameState.comboEndTime = 0;
+    this.gameState.comboLevel = 0;
+    this.gameState.nextComboLevel = 0;
     this.gameState.pendingComboStart = false;
 
     // Reseta estado de rodadas
@@ -583,6 +583,7 @@ class ScaleMasterApp {
       this.gameState.totalInitialTime = this.config.scoreRoundTime;
     }
 
+    if (this.comboProgressFill) this.comboProgressFill.style.width = '0%';
     this.updateStatsUI();
     this.updateComboUI();
     this.updateRoundUI();
@@ -602,10 +603,10 @@ class ScaleMasterApp {
     }
   }
 
+  // Sempre arredonda o tempo para números inteiros (ex: 17s, 16s etc.)
   formatTimeDisplay(seconds) {
     if (seconds <= 0) return '0s';
-    const rounded = Math.round(seconds * 10) / 10;
-    return rounded % 1 === 0 ? `${rounded.toFixed(0)}s` : `${rounded.toFixed(1)}s`;
+    return `${Math.ceil(seconds)}s`;
   }
 
   updateRoundUI() {
@@ -628,18 +629,7 @@ class ScaleMasterApp {
         if (this.bonusBadge) this.bonusBadge.style.display = 'none';
       }
 
-      // Atualiza as bolinhas de progresso das 5 rodadas
-      if (this.roundDots) {
-        this.roundDots.forEach(dot => {
-          const r = parseInt(dot.dataset.round, 10);
-          dot.classList.remove('active', 'completed');
-          if (r < this.timeAttackState.round) {
-            dot.classList.add('completed');
-          } else if (r === this.timeAttackState.round) {
-            dot.classList.add('active');
-          }
-        });
-      }
+      this.updateComboUI();
     } else {
       this.roundBar.style.display = 'none';
       if (this.bonusBadge) this.bonusBadge.style.display = 'none';
@@ -659,7 +649,7 @@ class ScaleMasterApp {
     this.timeProgressBar.style.width = '100%';
 
     if (this.config.gameMode === 'timeattack') {
-      // Loop de alta precisão (100ms) para Time Attack
+      // Loop contínuo para Time Attack
       this.gameState.timerInterval = setInterval(() => {
         this.gameState.timeLeft = Math.max(0, Math.round((this.gameState.timeLeft - 0.1) * 10) / 10);
         this.timerDisplay.textContent = this.formatTimeDisplay(this.gameState.timeLeft);
@@ -677,7 +667,7 @@ class ScaleMasterApp {
       // Loop de 1s para Pontuação e Ouvido
       this.gameState.timerInterval = setInterval(() => {
         this.gameState.timeLeft--;
-        this.timerDisplay.textContent = `${this.gameState.timeLeft}s`;
+        this.timerDisplay.textContent = this.formatTimeDisplay(this.gameState.timeLeft);
 
         const baseTime = this.config.gameMode === 'ear' 
           ? this.config.earQuestionTime 
@@ -694,10 +684,12 @@ class ScaleMasterApp {
     }
   }
 
+  // Inicia a mini-linha regressiva do combo (apenas a linha diminui, sem mostrar números de tempo)
   startComboTimer() {
     if (this.config.gameMode !== 'timeattack') return;
     // Na rodada 5, o combo é desativado
     if (this.timeAttackState.round === 5) return;
+    if (this.timeAttackState.isBonusQuestion) return;
 
     if (this.gameState.comboInterval) {
       clearInterval(this.gameState.comboInterval);
@@ -706,20 +698,27 @@ class ScaleMasterApp {
 
     const diffConfig = TIME_ATTACK_CONFIG[this.config.timeAttackDifficulty];
     const duration = diffConfig.comboWindow;
-    this.gameState.comboTimeLeft = duration;
-    this.gameState.comboEndTime = Date.now() + (duration * 1000);
+    const startTime = Date.now();
+    const durationMs = duration * 1000;
 
+    if (this.comboProgressFill) {
+      this.comboProgressFill.style.width = '100%';
+    }
     this.updateComboUI();
 
     this.gameState.comboInterval = setInterval(() => {
-      const remaining = (this.gameState.comboEndTime - Date.now()) / 1000;
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, durationMs - elapsed);
+      const pct = (remaining / durationMs) * 100;
+
+      if (this.comboProgressFill) {
+        this.comboProgressFill.style.width = `${pct}%`;
+      }
+
       if (remaining <= 0) {
         this.expireCombo();
-      } else {
-        this.gameState.comboTimeLeft = Math.max(0, Math.round(remaining * 10) / 10);
-        this.updateComboUI();
       }
-    }, 50);
+    }, 25);
   }
 
   expireCombo() {
@@ -727,8 +726,10 @@ class ScaleMasterApp {
       clearInterval(this.gameState.comboInterval);
       this.gameState.comboInterval = null;
     }
-    this.gameState.comboMultiplier = 1;
-    this.gameState.comboTimeLeft = 0;
+    this.gameState.comboLevel = 0;
+    if (this.comboProgressFill) {
+      this.comboProgressFill.style.width = '0%';
+    }
     this.updateComboUI();
   }
 
@@ -737,22 +738,23 @@ class ScaleMasterApp {
 
     if (this.config.gameMode === 'timeattack') {
       if (this.timeAttackState.round === 5) {
-        this.comboBadge.textContent = '🚫 1x (Fase Final)';
-        if (this.comboPill) this.comboPill.classList.remove('combo-active');
+        this.comboBadge.textContent = '🚫 Sem Combo';
+        if (this.roundComboBlock) this.roundComboBlock.classList.remove('combo-active');
+        if (this.comboProgressFill) this.comboProgressFill.style.width = '0%';
       } else if (this.timeAttackState.isBonusQuestion) {
-        this.comboBadge.textContent = '⭐ Bônus Especial';
-        if (this.comboPill) this.comboPill.classList.remove('combo-active');
-      } else if (this.gameState.comboMultiplier > 1 && this.gameState.comboTimeLeft > 0) {
-        this.comboBadge.innerHTML = `🔥 ${this.gameState.comboMultiplier}x <span class="combo-time-text">· ${this.gameState.comboTimeLeft.toFixed(1)}s</span>`;
-        if (this.comboPill) this.comboPill.classList.add('combo-active');
+        this.comboBadge.textContent = '⭐ Bônus';
+        if (this.roundComboBlock) this.roundComboBlock.classList.remove('combo-active');
+        if (this.comboProgressFill) this.comboProgressFill.style.width = '0%';
+      } else if (this.gameState.comboLevel > 0) {
+        this.comboBadge.textContent = `Combo ${this.gameState.comboLevel}+`;
+        if (this.roundComboBlock) this.roundComboBlock.classList.add('combo-active');
       } else {
-        this.comboBadge.textContent = 'Combo 1x';
-        if (this.comboPill) this.comboPill.classList.remove('combo-active');
+        this.comboBadge.textContent = 'Combo 0';
+        if (this.roundComboBlock) this.roundComboBlock.classList.remove('combo-active');
+        if (this.comboProgressFill) this.comboProgressFill.style.width = '0%';
       }
     } else {
-      const mult = Math.min(4, 1 + Math.floor(this.gameState.streak / 3) * 0.5);
-      this.comboBadge.textContent = `Combo ${mult}x`;
-      if (this.comboPill) this.comboPill.classList.remove('combo-active');
+      if (this.roundComboBlock) this.roundComboBlock.style.display = 'none';
     }
   }
 
@@ -774,7 +776,7 @@ class ScaleMasterApp {
   resetQuestionTimer() {
     if (this.config.gameMode === 'ear') {
       this.gameState.timeLeft = this.config.earQuestionTime;
-      this.timerDisplay.textContent = `${this.gameState.timeLeft}s`;
+      this.timerDisplay.textContent = this.formatTimeDisplay(this.gameState.timeLeft);
       this.timeProgressBar.style.width = '100%';
     }
   }
@@ -793,12 +795,13 @@ class ScaleMasterApp {
     if (this.questionContainer) this.questionContainer.classList.remove('bonus-mode');
     if (this.timeProgressBar) this.timeProgressBar.classList.remove('bonus-progress');
 
-    // Se estiver no modo Contra o Tempo e houver combo pendente, inicia o mini-timer
+    // Se estiver no modo Contra o Tempo e houver combo pendente, inicia o mini-timer no momento que a pergunta surge
     if (this.config.gameMode === 'timeattack') {
       if (this.timeAttackState.round === 5) {
         this.expireCombo();
       } else if (this.gameState.pendingComboStart) {
         this.gameState.pendingComboStart = false;
+        this.gameState.comboLevel = this.gameState.nextComboLevel;
         this.startComboTimer();
       } else {
         this.updateComboUI();
@@ -882,9 +885,9 @@ class ScaleMasterApp {
 
     this.renderChoiceOptions(targetNote.noteEn);
 
-    // 4. Inicia contagem regressiva dedicada de 10s da Pergunta Bônus
+    // 4. Inicia contagem regressiva dedicada de 10s da Pergunta Bônus (arredondada para inteiros)
     this.timeAttackState.bonusTimeLeft = 10.0;
-    this.timerDisplay.textContent = `⭐ 10.0s`;
+    this.timerDisplay.textContent = `⭐ 10s`;
     this.timeProgressBar.style.width = '100%';
 
     if (this.timeAttackState.bonusInterval) clearInterval(this.timeAttackState.bonusInterval);
@@ -991,7 +994,7 @@ class ScaleMasterApp {
         this.timeAttackState.bonusWonCount++;
         this.gameState.correctAnswers++;
         this.gameState.streak++;
-        this.gameState.score += 50; // Pontos bônus extras
+        this.gameState.score += 50;
 
         const diffConfig = TIME_ATTACK_CONFIG[this.config.timeAttackDifficulty];
         const bonusGain = diffConfig.bonusGain; // 3x base gain (+30s, +15s, +9s, +4.5s)
@@ -1070,36 +1073,39 @@ class ScaleMasterApp {
           this.gameState.timeLeft += reducedGain;
           this.timerDisplay.textContent = this.formatTimeDisplay(this.gameState.timeLeft);
 
-          inlineText = `✅ +${this.formatTimeDisplay(reducedGain)} (-20%)`;
-          feedbackText = `Correto! +${this.formatTimeDisplay(reducedGain)} (Fase Final: -20% sem Combo)`;
-          this.gameState.comboMultiplier = 1;
+          inlineText = `✅ +${Math.round(reducedGain)}s (-20%)`;
+          feedbackText = `Correto! +${Math.round(reducedGain)}s (Fase Final: -20% sem Combo)`;
+          this.gameState.comboLevel = 0;
           this.gameState.pendingComboStart = false;
+          this.expireCombo();
           this.gameState.score += 10;
         } else {
-          // Rodadas 1 a 4: Ganho normal multiplicado pelo combo ativo
-          const currentMultiplier = this.gameState.comboMultiplier;
-          const secondsBonus = diffConfig.correctGain * currentMultiplier;
+          // Rodadas 1 a 4: Combo 0 = ganho normal; Combo 1+ = +1s; Combo 2+ = +2s; Combo 3+ = +3s; Combo 4+ = +4s máx
+          const currentLevel = this.gameState.comboLevel || 0;
+          const extraSeconds = Math.min(4, currentLevel);
+          const totalSecondsGain = diffConfig.correctGain + extraSeconds;
 
-          this.gameState.timeLeft += secondsBonus;
+          this.gameState.timeLeft += totalSecondsGain;
           this.timerDisplay.textContent = this.formatTimeDisplay(this.gameState.timeLeft);
 
-          if (currentMultiplier > 1) {
-            inlineText = `✅ +${this.formatTimeDisplay(secondsBonus)} (${currentMultiplier}x!)`;
-            feedbackText = `🔥 Combo ${currentMultiplier}x! +${this.formatTimeDisplay(secondsBonus)}`;
-            this.gameState.comboMultiplier = currentMultiplier + 1;
+          // Próximo combo: avança em +1 até o teto de 4+
+          const nextLevel = Math.min(4, currentLevel + 1);
+          this.gameState.nextComboLevel = nextLevel;
+          this.gameState.pendingComboStart = true;
+
+          if (currentLevel > 0) {
+            inlineText = `🔥 +${Math.round(totalSecondsGain)}s (Combo ${currentLevel}+)`;
+            feedbackText = `🔥 Combo ${currentLevel}+! +${Math.round(totalSecondsGain)}s (+${extraSeconds}s extra)`;
           } else {
-            inlineText = `✅ +${this.formatTimeDisplay(secondsBonus)}`;
-            feedbackText = `Correto! +${this.formatTimeDisplay(secondsBonus)}`;
-            this.gameState.comboMultiplier = 2;
+            inlineText = `✅ +${Math.round(totalSecondsGain)}s`;
+            feedbackText = `Correto! +${Math.round(totalSecondsGain)}s`;
           }
 
-          this.gameState.score += Math.round(10 * currentMultiplier);
-          this.gameState.pendingComboStart = true;
+          this.gameState.score += 10 + (extraSeconds * 5);
         }
 
         // Progressão da pergunta na rodada
         if (this.timeAttackState.questionInRound >= 10) {
-          // Concluiu a 10ª pergunta: a próxima será a pergunta BÔNUS da rodada!
           this.timeAttackState.isBonusQuestion = true;
         } else {
           this.timeAttackState.questionInRound++;
@@ -1249,12 +1255,12 @@ class ScaleMasterApp {
   }
 
   updateStatsUI() {
-    if (this.config.gameMode === 'timeattack' || this.config.gameMode === 'ear') {
-      this.currentScoreDisplay.textContent = `${this.gameState.correctAnswers} acertos`;
-      document.querySelector('.score-pill .pill-label').textContent = 'Acertos';
-    } else {
-      this.currentScoreDisplay.textContent = this.gameState.score;
-      document.querySelector('.score-pill .pill-label').textContent = 'Pontos';
+    if (this.scorePillText) {
+      if (this.config.gameMode === 'timeattack' || this.config.gameMode === 'ear') {
+        this.scorePillText.textContent = `Acertos ${this.gameState.correctAnswers}`;
+      } else {
+        this.scorePillText.textContent = `Pontos ${this.gameState.score}`;
+      }
     }
 
     this.streakCounter.textContent = `🔥 ${this.gameState.streak}`;
